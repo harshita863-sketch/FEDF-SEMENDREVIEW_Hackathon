@@ -1170,7 +1170,7 @@ export default function Dashboard(){
             return o.id == orderId ? { ...o, status:status } : o;
         }));
 
-        // keep payment.html in sync if this is the latest order
+     
         const last = load("lastOrder", null);
         if(last != null && last.id == orderId){
             last.status = status;
