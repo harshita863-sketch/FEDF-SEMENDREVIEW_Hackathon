@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,7 +7,6 @@ const css = `
 .pay-body{
     background:#f1f3f6;
     font-family:Arial, Helvetica, sans-serif;
-    min-height:100vh;
 }
 
 .pay-body *{
@@ -325,28 +323,23 @@ const css = `
 function load(key, fallback){
     try{
         const value = JSON.parse(localStorage.getItem(key));
-        return value ?? fallback;
+        return value || fallback;
     }
-    catch(error){
+    catch(e){
         return fallback;
     }
 }
 
-/* ---------- Load latest order ---------- */
-
+// take the newest status from the saved orders (the merchant may have changed it)
 function loadOrder(){
 
     const last = load("lastOrder", null);
 
-    if(!last){
+    if(last == null){
         return null;
     }
 
-    const orders = load("shopOrders", []);
-
-    const found = orders.find(function(o){
-        return o.id == last.id;
-    });
+    const found = load("shopOrders", []).find(function(o){ return o.id == last.id; });
 
     return found || last;
 }
@@ -361,446 +354,228 @@ export default function Payment(){
     const [cancelOpen, setCancelOpen] = useState(false);
     const [reason, setReason] = useState("Ordered by mistake");
 
-    /* Go back to Dashboard */
-
+    // go to the dashboard route (change "/dashboard" to match the path in your router)
     function goShop(){
         navigate("/dashboard");
     }
 
-    /* Cancel order */
-
     function cancelOrder(){
 
-        if(!order){
-            return;
-        }
+        const cancelled = { ...order, status:"Cancelled", cancelReason:reason };
 
-        const cancelled = {
-            ...order,
-            status:"Cancelled",
-            cancelReason:reason
-        };
-
-        // Update saved orders
+        // update the order in the saved orders list (so the merchant sees it)
         const allOrders = load("shopOrders", []).map(function(o){
-            return o.id == cancelled.id
-                ? cancelled
-                : o;
+            return o.id == cancelled.id ? { ...o, status:"Cancelled", cancelReason:reason } : o;
         });
 
-        localStorage.setItem(
-            "shopOrders",
-            JSON.stringify(allOrders)
-        );
+        localStorage.setItem("shopOrders", JSON.stringify(allOrders));
+        localStorage.setItem("lastOrder", JSON.stringify(cancelled));
 
-        localStorage.setItem(
-            "lastOrder",
-            JSON.stringify(cancelled)
-        );
-
-        // Restore product stock
+        // put the items back in stock
         const savedProducts = load("shopProducts", null);
 
-        if(savedProducts != null && Array.isArray(cancelled.items)){
-
+        if(savedProducts != null){
             const updated = savedProducts.map(function(p){
-
-                const item = cancelled.items.find(function(it){
-                    return it.id == p.id;
-                });
-
-                return item
-                    ? { ...p, stock:Number(p.stock || 0) + Number(item.qty || 0) }
-                    : p;
+                const item = cancelled.items.find(function(it){ return it.id == p.id; });
+                return item ? { ...p, stock:p.stock + item.qty } : p;
             });
-
-            localStorage.setItem(
-                "shopProducts",
-                JSON.stringify(updated)
-            );
+            localStorage.setItem("shopProducts", JSON.stringify(updated));
         }
 
         setOrder(cancelled);
         setCancelOpen(false);
     }
 
-    /* ---------- No order found ---------- */
+    /* ----- no order found ----- */
 
     if(order == null){
-
         return (
             <div className="pay-body">
                 <style>{css}</style>
-
                 <div className="pay-page">
                     <div className="pay-empty">
-                        <h2>No recent order found.</h2>
-                        <p>Please place an order first.</p>
-
-                        <button onClick={goShop}>
-                            Go back to shop
-                        </button>
+                        <p>No recent order found.</p>
+                        <button onClick={goShop}>Go back to shop</button>
                     </div>
                 </div>
             </div>
         );
     }
 
-    /* ---------- Order details ---------- */
+    /* ----- status texts ----- */
 
-    const items = Array.isArray(order.items)
-        ? order.items
-        : [];
+    const totalQty = order.items.reduce(function(sum, it){ return sum + it.qty; }, 0);
 
-    const totalQty = items.reduce(function(sum, it){
-        return sum + Number(it.qty || 0);
-    }, 0);
-
-    const isCancelled = order.status === "Cancelled";
-
-    const canCancel =
-        order.status === "Placed" ||
-        order.status === "Packed";
+    const isCancelled = (order.status == "Cancelled");
+    const canCancel = (order.status == "Placed" || order.status == "Packed");
 
     let title = "Order Placed";
     let text = "Your order will be delivered soon";
 
     if(isCancelled){
-
         title = "Order Cancelled";
         text = "Your order has been cancelled.";
-
     }
-    else if(order.status === "Delivered"){
-
+    else if(order.status == "Delivered"){
         title = "Order Delivered";
         text = "Your order has been delivered.";
-
     }
-    else if(order.status === "Shipped"){
-
+    else if(order.status == "Shipped"){
         title = "Order Shipped";
         text = "Your order is on the way and will be delivered soon";
-
-    }
-    else if(order.status === "Packed"){
-
-        title = "Order Packed";
-        text = "Your order has been packed.";
-
     }
 
-    /* ---------- Expected delivery ---------- */
-
+    // expected delivery: 5 days from today
     let expected = "";
 
     if(isCancelled){
-
         if(order.cancelReason){
             expected = "Reason: " + order.cancelReason;
         }
-
     }
-    else if(order.status !== "Delivered"){
-
+    else if(order.status != "Delivered"){
         const d = new Date();
         d.setDate(d.getDate() + 5);
-
-        expected = "Expected by " +
-            d.toLocaleDateString("en-IN", {
-                weekday:"short",
-                day:"numeric",
-                month:"short"
-            });
+        expected = (order.guarantee ? "Guaranteed delivery by " : "Expected by ") + d.toLocaleDateString("en-IN", { weekday:"short", day:"numeric", month:"short" });
     }
 
-    /* ---------- Payment note ---------- */
-
+    // payment note
     let paidText = "";
 
     if(isCancelled){
-
-        paidText = order.payment === "Cash on Delivery"
+        paidText = (order.payment == "Cash on Delivery")
             ? "No payment was taken. Nothing to refund."
-            : "This is a demo order. Refunds are not processed by this website.";
-
+            : "Refund of ₹" + order.total + " will be sent to your card in 5-7 working days.";
     }
     else{
-
-        paidText = order.payment === "Cash on Delivery"
+        paidText = (order.payment == "Cash on Delivery")
             ? "Payment: Cash on Delivery - pay ₹" + order.total + " when delivered"
-            : "Demo payment method: " + order.payment;
-
+            : "Paid ₹" + order.total + " by " + order.payment;
     }
 
-    /* ---------- Screen ---------- */
+    /* ----- screen ----- */
 
     return (
-
         <div className="pay-body">
-
             <style>{css}</style>
 
             <div className="pay-page">
 
-                {/* Top bar */}
-
                 <div className="pay-topbar">
-
-                    <button
-                        className="back"
-                        onClick={goShop}
-                    >
-                        &#8592;
-                    </button>
-
+                    <button className="back" onClick={goShop}>&#8592;</button>
                     <h1>Order Details</h1>
-
-                    <button
-                        className="help"
-                        onClick={function(){
-                            alert("Contact support: support@ecommerce.com");
-                        }}
-                    >
-                        Help
-                    </button>
-
+                    <button className="help" onClick={function(){ alert("Contact support: support@ecommerce.com"); }}>Help</button>
                 </div>
 
-                {/* Order status */}
-
+                {/* Status */}
                 <div className="pay-card">
-
-                    <p className="order-id">
-                        Order #{order.id} &nbsp;|&nbsp; {order.date}
-                    </p>
+                    <p className="order-id">Order #{order.id} &nbsp;|&nbsp; {order.date}</p>
 
                     <div className={"status" + (isCancelled ? " cancelled" : "")}>
-
-                        <div className="status-icon">
-                            {isCancelled ? "✕" : "✓"}
-                        </div>
-
+                        <div className="status-icon">{isCancelled ? "✕" : "✓"}</div>
                         <div>
                             <h2>{title}</h2>
                             <p>{text}</p>
-
-                            {expected !== "" && (
-                                <p>{expected}</p>
+                            {expected != "" && <p>{expected}</p>}
+                            {order.guarantee && !isCancelled && order.status != "Delivered" && (
+                                <p>🛡️ Delivery Guarantee active - on-time delivery promised</p>
                             )}
                         </div>
-
                     </div>
-
                 </div>
 
-                {/* Items ordered */}
-
+                {/* Items */}
                 <div className="pay-card">
+                    <div className="section-head">Items Ordered</div>
 
-                    <div className="section-head">
-                        Items Ordered
-                    </div>
-
-                    {items.map(function(it, i){
-
+                    {order.items.map(function(it, i){
                         return (
-
                             <div className="item" key={i}>
-
                                 <div>
-                                    {it.name}
-                                    <br />
-
-                                    <span className="qty">
-                                        Qty: {it.qty}
-                                    </span>
+                                    {it.name}<br />
+                                    <span className="qty">Qty: {it.qty}</span>
                                 </div>
-
-                                <div>
-                                    ₹{Number(it.price || 0) * Number(it.qty || 0)}
-                                </div>
-
+                                <div>₹{it.price * it.qty}</div>
                             </div>
-
                         );
                     })}
-
                 </div>
 
                 {/* Delivery details */}
-
                 <div className="pay-card">
-
-                    <div className="section-head">
-                        Delivery details
-                    </div>
+                    <div className="section-head">Delivery details</div>
 
                     <div className="row">
-
                         <span className="icon">📍</span>
-
-                        <div>
-                            <b>Address</b>
-                            <span>{order.address || "Not provided"}</span>
-                        </div>
-
+                        <div><b>Address</b><span>{order.address}</span></div>
                     </div>
 
                     <div className="row">
-
                         <span className="icon">👤</span>
-
-                        <div>
-                            <b>{order.name || "Customer"}</b>
-                            <span>{order.phone || "Not provided"}</span>
-                        </div>
-
+                        <div><b>{order.name}</b><span>{order.phone}</span></div>
                     </div>
-
-                    {order.email && (
-                        <div className="row">
-                            <span className="icon">✉️</span>
-                            <div>
-                                <b>Email</b>
-                                <span>{order.email}</span>
-                            </div>
-                        </div>
-                    )}
-
                 </div>
 
                 {/* Price details */}
-
                 <div className="pay-card">
+                    <div className="section-head">Price details</div>
 
-                    <div className="section-head">
-                        Price details
+                    <div className="price-row">
+                        <span>Price ({totalQty} item{totalQty > 1 ? "s" : ""})</span>
+                        <span>₹{order.itemsTotal != null ? order.itemsTotal : order.total}</span>
                     </div>
 
                     <div className="price-row">
-
-                        <span>
-                            Price ({totalQty} item{totalQty > 1 ? "s" : ""})
-                        </span>
-
-                        <span>
-                            ₹{order.total}
-                        </span>
-
-                    </div>
-
-                    <div className="price-row">
-
                         <span>Delivery Charges</span>
-
-                        <span style={{ color:"#1b7a34" }}>
-                            FREE
-                        </span>
-
+                        <span style={{ color:"#1b7a34" }}>FREE</span>
                     </div>
+
+                    {order.guarantee && (
+                        <div className="price-row">
+                            <span>🛡️ Delivery Guarantee</span>
+                            <span>₹{order.guaranteeFee}</span>
+                        </div>
+                    )}
 
                     <div className="price-row total">
-
                         <span>Total Amount</span>
-
-                        <span>
-                            ₹{order.total}
-                        </span>
-
+                        <span>₹{order.total}</span>
                     </div>
 
-                    <div className={"paid" + (isCancelled ? " cancelled" : "")}>
-                        {paidText}
-                    </div>
-
+                    <div className={"paid" + (isCancelled ? " cancelled" : "")}>{paidText}</div>
                 </div>
 
-                {/* Cancel order button */}
-
+                {/* Cancel button: shown only while the order can still be cancelled */}
                 {canCancel && (
-
-                    <button
-                        className="cancel-btn"
-                        onClick={function(){
-                            setCancelOpen(true);
-                        }}
-                    >
-                        Cancel Order
-                    </button>
-
+                    <button className="cancel-btn" onClick={function(){ setCancelOpen(true); }}>Cancel Order</button>
                 )}
 
-                {/* Continue shopping */}
-
-                <button
-                    className="shop-btn"
-                    onClick={goShop}
-                >
-                    Continue Shopping
-                </button>
+                <button className="shop-btn" onClick={goShop}>Continue Shopping</button>
 
             </div>
 
             {/* Cancel confirmation popup */}
-
             {cancelOpen && (
-
                 <div className="pay-overlay">
-
                     <div className="dialog">
-
                         <h3>Cancel this order?</h3>
+                        <p>Please tell us why you want to cancel.</p>
 
-                        <p>
-                            Please tell us why you want to cancel.
-                        </p>
-
-                        <select
-                            value={reason}
-                            onChange={function(e){
-                                setReason(e.target.value);
-                            }}
-                        >
-
+                        <select value={reason} onChange={function(e){ setReason(e.target.value); }}>
                             <option>Ordered by mistake</option>
-
                             <option>Found a better price</option>
-
                             <option>Delivery is taking too long</option>
-
                             <option>Want to change address or item</option>
-
                             <option>Other</option>
-
                         </select>
 
                         <div className="dialog-buttons">
-
-                            <button
-                                className="keep"
-                                onClick={function(){
-                                    setCancelOpen(false);
-                                }}
-                            >
-                                Keep Order
-                            </button>
-
-                            <button
-                                className="confirm"
-                                onClick={cancelOrder}
-                            >
-                                Yes, Cancel
-                            </button>
-
+                            <button className="keep" onClick={function(){ setCancelOpen(false); }}>Keep Order</button>
+                            <button className="confirm" onClick={cancelOrder}>Yes, Cancel</button>
                         </div>
-
                     </div>
-
                 </div>
-
             )}
-
         </div>
     );
 }

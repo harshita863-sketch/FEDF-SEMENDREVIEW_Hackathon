@@ -13,6 +13,7 @@ function Login() {
 
         // Admin login
         if (user === "admin" && pass === "1234") {
+            alert("Successfully logged in!");
             navigate("/dashboard");
             return;
         }
@@ -22,6 +23,7 @@ function Login() {
         const storedPass = localStorage.getItem("password");
 
         if (user === storedUser && pass === storedPass) {
+            alert("Successfully logged in!");
             navigate("/dashboard");
         } else {
             alert("Invalid username or password!");
@@ -29,8 +31,8 @@ function Login() {
     }
 
     return (
-        <div className="login-page">
-            <div className="login-box">
+        <main className="login-page">
+            <article className="login-box">
 
                 <img
                     src="https://cdn5.vectorstock.com/i/1000x1000/79/79/beautiful-woman-shopping-composed-in-a-circle-vector-6157979.jpg"
@@ -40,6 +42,7 @@ function Login() {
                 <h2>WELCOME USER</h2>
 
                 <form onSubmit={handleLogin}>
+
                     <input
                         type="text"
                         name="username"
@@ -54,16 +57,19 @@ function Login() {
                         required
                     />
 
+                  
+
                     <button type="submit">Login</button>
+
                 </form>
 
-                <div className="register-link">
+                <footer className="register-link">
                     If not have an account{" "}
                     <Link to="/signup">Register here</Link>
-                </div>
+                </footer>
 
-            </div>
-        </div>
+            </article>
+        </main>
     );
 }
 

@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Management</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f2f5f9;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px gray;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        input {
+            width: 95%;
+            padding: 10px;
+            margin: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 25px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+        }
+
+        .delete {
+            background: red;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Student Management</h1><br>
+
+    <input id="id" placeholder="Student ID">
+    <input id="name" placeholder="Student Name">
+    <input id="course" placeholder="Course">
+    <input id="marks" type="number" placeholder="Marks">
+
+    <center>
+        <button onclick="addStudent()">Add Student</button>
+    </center>
+
+    <table id="table">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Course</th>
+            <th>Marks</th>
+            <th>Action</th>
+        </tr>
+    </table>
+</div>
+
+<script>
+    let students = JSON.parse(localStorage.getItem("students")) || [];
+
+    function display() {
+        let table = document.getElementById("table");
+
+        table.innerHTML = "<tr><th>ID</th><th>Name</th><th>Course</th><th>Marks</th><th>Action</th></tr>";
+
+        students.forEach(function(s, i) {
+            table.innerHTML += "<tr><td>" + s.id +
+                "</td><td>" + s.name +
+                "</td><td>" + s.course +
+                "</td><td>" + s.marks +
+                '</td><td><button class="delete" onclick="deleteStudent(' +
+                i + ')">Delete</button></td></tr>';
+        });
+    }
+
+    function addStudent() {
+        let student = {
+            id: document.getElementById("id").value,
+            name: document.getElementById("name").value,
+            course: document.getElementById("course").value,
+            marks: document.getElementById("marks").value
+        };
+
+        if (student.id == "" || student.name == "" ||
+            student.course == "" || student.marks == "") {
+            alert("Fill all fields!");
+            return;
+        }
+
+        students[students.length] = student;
+
+        localStorage.setItem("students", JSON.stringify(students));
+
+        display();
+        alert("Student Added!");
+    }
+
+    function deleteStudent(i) {
+        students = students.filter(function(s, index) {
+            return index != i;
+        });
+
+        localStorage.setItem("students", JSON.stringify(students));
+        display();
+    }
+
+    display();
+</script>
+
+</body>
+</html>
+

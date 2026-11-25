@@ -1,8 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-/* ---------- Styles (same as before) ---------- */
-
+/* ---------- Styles ---------- */
 const css = `
 *{
     margin:0;
@@ -232,6 +231,45 @@ body{
     display:block;
     font-size:20px;
     color:#7851a9;
+}
+
+/* ---------- Delivery guarantee ---------- */
+.panel .guarantee-box{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    margin-top:15px;
+    padding:12px;
+    border:2px dashed #7851a9;
+    border-radius:10px;
+    background:#f4eefb;
+    cursor:pointer;
+    font-weight:normal;
+    font-size:14px;
+    line-height:1.5;
+}
+
+.panel .guarantee-box input{
+    width:20px;
+    height:20px;
+    padding:0;
+    margin-top:2px;
+    cursor:pointer;
+}
+
+.guarantee-box b{
+    color:#7851a9;
+}
+
+.guarantee-tag{
+    display:inline-block;
+    background:#f4eefb;
+    color:#7851a9;
+    border:1px solid #7851a9;
+    border-radius:12px;
+    padding:2px 10px;
+    font-size:12px;
+    font-weight:bold;
 }
 
 /* ---------- Search and sort ---------- */
@@ -728,25 +766,24 @@ footer{
 `;
 
 /* ---------- Data ---------- */
-
 const defaultProducts = [
-    { id:1, name:"Makeup Pack", category:"makeup", price:1700, discount:50, stock:10, icon:"💄",
+    { id:1,  name:"Makeup Pack",    category:"makeup",    price:1700, discount:50, stock:10, icon:"💄",
       image:"https://www.dermablogger.com/images/posts/10-must-have-cosmetics-for-every-woman-s-beauty-routine-md.jpg" },
-    { id:2, name:"Dress", category:"dress", price:240, discount:40, stock:10, icon:"👗",
+    { id:2,  name:"Dress",          category:"dress",     price:240,  discount:40, stock:10, icon:"👗",
       image:"https://i.pinimg.com/originals/99/dc/61/99dc61b035b5596ee7af93c6c8465616.jpg" },
-    { id:3, name:"Women Suit", category:"dress", price:203, discount:30, stock:10, icon:"👗",
+    { id:3,  name:"Women Suit",     category:"dress",     price:203,  discount:30, stock:10, icon:"👗",
       image:"https://i.pinimg.com/originals/65/f5/26/65f52629be77028d1b4c5a98684cdceb.png" },
-    { id:4, name:"Coat", category:"dress", price:800, discount:20, stock:10, icon:"🧥",
+    { id:4,  name:"Coat",           category:"dress",     price:800,  discount:20, stock:10, icon:"🧥",
       image:"https://i5.walmartimages.com/seo/Pea-Coats-for-Women-Womens-Fashion-Winter-Long-Trench-Coat-Jackets-Notch-Collar-Open-Front-Cardigans-Outwear_f05efe24-9afc-4605-884c-c50d934202a7.08846bd58f794e9506bdfef63a55b763.jpeg" },
-    { id:5, name:"Women Shoes", category:"shoes", price:300, discount:20, stock:10, icon:"👟",
+    { id:5,  name:"Women Shoes",    category:"shoes",     price:300,  discount:20, stock:10, icon:"👟",
       image:"https://m.media-amazon.com/images/I/71IhuPi7iTL._AC_SL1500_.jpg" },
-    { id:6, name:"Women Heels", category:"shoes", price:4000, discount:20, stock:10, icon:"👠",
+    { id:6,  name:"Women Heels",    category:"shoes",     price:4000, discount:20, stock:10, icon:"👠",
       image:"https://tse3.mm.bing.net/th/id/OIP.6WubmIz0gUgb8aURM3ArsAHaHa?r=0&pid=ImgDet&w=474&h=474&rs=1&o=7&rm=3" },
-    { id:7, name:"Watch", category:"accessory", price:2000, discount:20, stock:10, icon:"⌚",
+    { id:7,  name:"Watch",          category:"accessory", price:2000, discount:20, stock:10, icon:"⌚",
       image:"https://i.etsystatic.com/25605644/r/il/288464/4127036743/il_1588xN.4127036743_s68w.jpg" },
-    { id:8, name:"Bracelet", category:"accessory", price:1440, discount:20, stock:10, icon:"📿",
+    { id:8,  name:"Bracelet",       category:"accessory", price:1440, discount:20, stock:10, icon:"📿",
       image:"https://www.besttohave.com/images/adjustable-women-s-bracelet-925-sterling-silver-with-created-diamond-p550-4145_zoom.jpg" },
-    { id:9, name:"Flora Dress", category:"dress", price:2399, discount:20, stock:10, icon:"👗",
+    { id:9,  name:"Flora Dress",    category:"dress",     price:2399, discount:20, stock:10, icon:"👗",
       image:"https://i.pinimg.com/originals/7c/05/25/7c052579112694f094b19529a2c92b28.jpg" }
 ];
 
@@ -759,8 +796,6 @@ const categoryTiles = [
 ];
 
 const statuses = ["Placed", "Packed", "Shipped", "Delivered", "Cancelled"];
-
-// steps shown in the order tracker
 const trackSteps = ["Placed", "Packed", "Shipped", "Delivered"];
 
 const trackMessages = {
@@ -771,8 +806,8 @@ const trackMessages = {
 };
 
 const emptyProfile = { name:"", phone:"", email:"", address:"" };
-
-const emptyCheckout = { fullName:"", phone:"", email:"", address:"", payment:"", pin:"" };
+const GUARANTEE_FEE = 100;
+const emptyCheckout = { fullName:"", phone:"", email:"", address:"", payment:"", pin:"", guarantee:false };
 const emptyProductForm = { id:"", name:"", category:"accessory", price:"", discount:"", stock:"" };
 
 /* ---------- Storage helpers ---------- */
@@ -787,14 +822,28 @@ function load(key, fallback){
     }
 }
 
-// The Merch category was removed, so drop any old saved merch items
 function loadProducts(){
     return load("shopProducts", defaultProducts).filter(function(p){
         return p.category != "merch";
     });
 }
 
-/* ---------- Product picture (shows icon or name if it cannot load) ---------- */
+/* ---------- Simple API (all data access goes through here) ---------- */
+/* Uses localStorage now. To use a real server, change only these bodies, e.g.
+   getProducts: async function(){ return (await fetch("/api/products")).json(); } */
+
+const api = {
+    getProducts:  async function(){ return loadProducts(); },
+    saveProducts: async function(list){ localStorage.setItem("shopProducts", JSON.stringify(list)); },
+
+    getOrders:    async function(){ return load("shopOrders", []); },
+    saveOrders:   async function(list){ localStorage.setItem("shopOrders", JSON.stringify(list)); },
+
+    getProfile:   async function(){ return load("shopProfile", emptyProfile); },
+    saveProfile:  async function(p){ localStorage.setItem("shopProfile", JSON.stringify(p)); }
+};
+
+/* ---------- Product picture ---------- */
 
 function ProductImage({ p }){
 
@@ -803,11 +852,9 @@ function ProductImage({ p }){
     if(p.image == ""){
         return <div className="no-image">{p.icon}</div>;
     }
-
     if(failed){
         return <div className="no-image">{p.name}</div>;
     }
-
     return <img src={p.image} alt={p.name} onError={function(){ setFailed(true); }} />;
 }
 
@@ -817,14 +864,10 @@ export default function Dashboard(){
 
     const navigate = useNavigate();
 
-    const [products, setProducts] = useState(loadProducts);
-    const [orders, setOrders] = useState(function(){ return load("shopOrders", []); });
-    const [cart, setCart] = useState(function(){
-        const list = loadProducts();
-        return load("shopCart", []).filter(function(c){
-            return list.some(function(p){ return p.id == c.id; });
-        });
-    });
+    const [products, setProducts] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [profile, setProfile] = useState(emptyProfile);
+    const [cart, setCart] = useState(function(){ return load("shopCart", []); });
 
     const [currentCategory, setCurrentCategory] = useState("all");
     const [search, setSearch] = useState("");
@@ -846,7 +889,6 @@ export default function Dashboard(){
     const [accountOpen, setAccountOpen] = useState(false);
     const [accountTab, setAccountTab] = useState("history");
     const [trackId, setTrackId] = useState("");
-    const [profile, setProfile] = useState(function(){ return load("shopProfile", emptyProfile); });
 
     const [toastText, setToastText] = useState("");
     const [toastShow, setToastShow] = useState(false);
@@ -855,16 +897,29 @@ export default function Dashboard(){
     const formRef = useRef(null);
     const nameRef = useRef(null);
 
-    /* ----- saving (saved straight away so a page redirect never loses data) ----- */
+    // load everything from the api when the page opens
+    useEffect(function(){
+        api.getProducts().then(function(list){
+            setProducts(list);
+            // drop basket items whose product no longer exists
+            setCart(function(old){
+                return old.filter(function(c){
+                    return list.some(function(p){ return p.id == c.id; });
+                });
+            });
+        });
+        api.getOrders().then(setOrders);
+        api.getProfile().then(setProfile);
+    }, []);
 
     function saveProducts(list){
         setProducts(list);
-        localStorage.setItem("shopProducts", JSON.stringify(list));
+        api.saveProducts(list);
     }
 
     function saveOrders(list){
         setOrders(list);
-        localStorage.setItem("shopOrders", JSON.stringify(list));
+        api.saveOrders(list);
     }
 
     function saveCart(list){
@@ -909,7 +964,6 @@ export default function Dashboard(){
 
     /* ----- cart ----- */
 
-    // Buy button: adds the item but does NOT open the basket
     function addToCart(id){
 
         const p = findProduct(id);
@@ -959,6 +1013,9 @@ export default function Dashboard(){
     const total = cart.reduce(function(sum, c){ return sum + c.price * c.qty; }, 0);
     const cartCount = cart.reduce(function(sum, c){ return sum + c.qty; }, 0);
 
+    const guaranteeFee = checkout.guarantee ? GUARANTEE_FEE : 0;
+    const grandTotal = total + guaranteeFee;
+
     /* ----- checkout ----- */
 
     function openCheckout(){
@@ -968,7 +1025,6 @@ export default function Dashboard(){
             return;
         }
 
-        // fill the form from the saved profile (only empty fields)
         setCheckout(function(old){
             return {
                 ...old,
@@ -986,7 +1042,6 @@ export default function Dashboard(){
     function updateCheckout(field, value){
         setCheckout(function(old){
             const next = { ...old, [field]: value };
-            // clear the PIN when the card option is not selected
             if(field == "payment" && value != "Credit / Debit Card"){
                 next.pin = "";
             }
@@ -994,13 +1049,13 @@ export default function Dashboard(){
         });
     }
 
-    function placeOrder(event){
+    async function placeOrder(event){
 
         event.preventDefault();
 
-        // read the newest saved data (the order may have been changed on payment page)
-        const savedOrders = load("shopOrders", []);
-        const savedProducts = loadProducts();
+        // read the newest data through the api
+        const savedOrders = await api.getOrders();
+        const savedProducts = await api.getProducts();
 
         const orderId = "ORD" + (1001 + savedOrders.length);
 
@@ -1008,7 +1063,6 @@ export default function Dashboard(){
             return { id:c.id, name:c.name, qty:c.qty, price:c.price };
         });
 
-        // reduce the stock
         const newProducts = savedProducts.map(function(p){
             const inCart = cart.find(function(c){ return c.id == p.id; });
             return inCart ? { ...p, stock:Math.max(0, p.stock - inCart.qty) } : p;
@@ -1022,7 +1076,10 @@ export default function Dashboard(){
             address:checkout.address,
             payment:checkout.payment,
             items:items,
-            total:total,
+            itemsTotal:total,
+            guarantee:checkout.guarantee,
+            guaranteeFee:guaranteeFee,
+            total:grandTotal,
             status:"Placed",
             date:new Date().toLocaleDateString()
         };
@@ -1030,7 +1087,6 @@ export default function Dashboard(){
         saveOrders([...savedOrders, order]);
         saveProducts(newProducts);
 
-        // keep the latest order so payment.html can read it
         localStorage.setItem("lastOrder", JSON.stringify(order));
 
         setCheckout(emptyCheckout);
@@ -1055,9 +1111,8 @@ export default function Dashboard(){
         setMerchantTitle("Merchant Dashboard - " + merchantId);
         setLoginOpen(false);
 
-        // load the newest data (customers may have cancelled orders)
-        setOrders(load("shopOrders", []));
-        setProducts(loadProducts());
+        api.getOrders().then(setOrders);
+        api.getProducts().then(setProducts);
 
         setTab("inventory");
         setMerchantOpen(true);
@@ -1065,8 +1120,8 @@ export default function Dashboard(){
 
     function switchTab(name){
         if(name == "orders"){
-            setOrders(load("shopOrders", []));
-            setProducts(loadProducts());
+            api.getOrders().then(setOrders);
+            api.getProducts().then(setProducts);
         }
         setTab(name);
     }
@@ -1079,7 +1134,6 @@ export default function Dashboard(){
         setForm(emptyProductForm);
     }
 
-    // Fill the form with a product so the merchant can update its details
     function editProduct(id){
 
         const p = findProduct(id);
@@ -1101,7 +1155,6 @@ export default function Dashboard(){
         }
     }
 
-    // Add a new product or update an existing one
     function saveProduct(event){
 
         event.preventDefault();
@@ -1111,7 +1164,6 @@ export default function Dashboard(){
         const stock = Number(form.stock);
 
         if(form.id === ""){
-            // new product (no picture, so an icon is shown)
             let newId = 1;
             products.forEach(function(p){
                 if(p.id >= newId){
@@ -1131,7 +1183,6 @@ export default function Dashboard(){
                     : p;
             }));
 
-            // keep the basket in sync with the new name and price
             saveCart(cart.map(function(c){
                 return c.id == form.id ? { ...c, name:form.name, price:price } : c;
             }));
@@ -1148,12 +1199,9 @@ export default function Dashboard(){
         }
 
         saveProducts(products.filter(function(p){ return p.id != id; }));
-
-        // remove it from the basket as well
         saveCart(cart.filter(function(c){ return c.id != id; }));
     }
 
-    // The merchant can track and change the order status
     function updateStatus(orderId, status){
 
         const target = orders.find(function(o){ return o.id == orderId; });
@@ -1170,7 +1218,6 @@ export default function Dashboard(){
             return o.id == orderId ? { ...o, status:status } : o;
         }));
 
-     
         const last = load("lastOrder", null);
         if(last != null && last.id == orderId){
             last.status = status;
@@ -1183,8 +1230,7 @@ export default function Dashboard(){
     /* ----- customer account ----- */
 
     function openAccount(){
-        // load the newest data (the merchant may have changed a status)
-        setOrders(load("shopOrders", []));
+        api.getOrders().then(setOrders);
         setAccountTab("history");
         setAccountOpen(true);
     }
@@ -1200,7 +1246,7 @@ export default function Dashboard(){
 
     function saveProfile(event){
         event.preventDefault();
-        localStorage.setItem("shopProfile", JSON.stringify(profile));
+        api.saveProfile(profile);
         showToast("Profile saved");
     }
 
@@ -1225,7 +1271,6 @@ export default function Dashboard(){
                     />
                 )}
 
-                {/* Merchant button (top left) */}
                 <div className="top-left">
                     <button className="merchant-button" onClick={openMerchant}>
                         <span className="icon">🏪</span> Merchant
@@ -1237,7 +1282,6 @@ export default function Dashboard(){
                 </div>
 
                 <div className="top-buttons">
-                    {/* Basket button: the cart opens only from here */}
                     <button className="cart-button" onClick={function(){ setCartOpen(true); }}>
                         <span className="icon">🛒</span> Basket <span id="cartCount">{cartCount}</span>
                     </button>
@@ -1246,7 +1290,6 @@ export default function Dashboard(){
                 </div>
             </header>
 
-            {/* Search bar and price filter */}
             <section className="search-section">
                 <input
                     type="search"
@@ -1264,7 +1307,6 @@ export default function Dashboard(){
                 </select>
             </section>
 
-            {/* Category grid */}
             <nav>
                 <h2 className="section-title">Shop by Category</h2>
 
@@ -1368,7 +1410,10 @@ export default function Dashboard(){
                             {cart.map(function(c){
                                 return <span key={c.id}>{c.name} x {c.qty} - ₹{c.price * c.qty}<br /></span>;
                             })}
-                            <br /><b>Total: ₹{total}</b>
+                            {checkout.guarantee && (
+                                <span>🛡️ Delivery Guarantee - ₹{guaranteeFee}<br /></span>
+                            )}
+                            <br /><b>Total: ₹{grandTotal}</b>
                         </div>
 
                         <label htmlFor="fullName">Full Name</label>
@@ -1395,7 +1440,6 @@ export default function Dashboard(){
                             <option value="Credit / Debit Card">Credit / Debit Card</option>
                         </select>
 
-                        {/* PIN box: appears only when Credit / Debit Card is selected */}
                         {checkout.payment == "Credit / Debit Card" && (
                             <div>
                                 <label htmlFor="pin">Enter your PIN</label>
@@ -1404,6 +1448,17 @@ export default function Dashboard(){
                                     value={checkout.pin} onChange={function(e){ updateCheckout("pin", e.target.value); }} />
                             </div>
                         )}
+
+                        <label className="guarantee-box" htmlFor="guarantee">
+                            <input type="checkbox" id="guarantee"
+                                checked={checkout.guarantee}
+                                onChange={function(e){ updateCheckout("guarantee", e.target.checked); }} />
+                            <span>
+                                <b>🛡️ Delivery Guarantee - add ₹{GUARANTEE_FEE}</b><br />
+                                Extra safety: we guarantee your delivery will not be delayed.
+                                If it is late, the ₹{GUARANTEE_FEE} is refunded.
+                            </span>
+                        </label>
 
                         <div className="cart-buttons" style={{ marginTop:"20px" }}>
                             <button type="button" className="cart-action" onClick={function(){ setCheckoutOpen(false); }}>Back</button>
@@ -1414,7 +1469,7 @@ export default function Dashboard(){
                 </div>
             </section>
 
-            {/* My Account popup (customer) */}
+            {/* My Account popup */}
             <section className="overlay" style={{ display: accountOpen ? "block" : "none" }}>
                 <div className="panel" style={{ width:"620px" }}>
 
@@ -1426,7 +1481,6 @@ export default function Dashboard(){
                         <button className={accountTab == "profile" ? "active" : ""} onClick={function(){ setAccountTab("profile"); }}>Profile</button>
                     </div>
 
-                    {/* Order history */}
                     {accountTab == "history" && (
                         <div>
                             {orders.length == 0 && <p style={{ textAlign:"center" }}>You have no orders yet.</p>}
@@ -1438,6 +1492,9 @@ export default function Dashboard(){
                                         <span className={"badge " + o.status}>{o.status}</span><br />
                                         Items: {o.items.map(function(it){ return it.name + " x " + it.qty; }).join(", ")}<br />
                                         Total: ₹{o.total} | Payment: {o.payment}<br />
+                                        {o.guarantee && (
+                                            <><span className="guarantee-tag">🛡️ Delivery Guarantee</span><br /></>
+                                        )}
                                         <button className="cart-action" style={{ margin:"6px 0 0" }} onClick={function(){ trackOrder(o.id); }}>
                                             Track Order
                                         </button>
@@ -1447,7 +1504,6 @@ export default function Dashboard(){
                         </div>
                     )}
 
-                    {/* Track order */}
                     {accountTab == "track" && (function(){
 
                         if(orders.length == 0){
@@ -1492,6 +1548,9 @@ export default function Dashboard(){
                                     {selected.items.map(function(it, i){
                                         return <span key={i}>{it.name} x {it.qty} - ₹{it.price * it.qty}<br /></span>;
                                     })}
+                                    {selected.guarantee && (
+                                        <>🛡️ Delivery Guarantee: ₹{selected.guaranteeFee}<br /></>
+                                    )}
                                     <b>Total: ₹{selected.total}</b> | Payment: {selected.payment}<br />
                                     Deliver to: {selected.name} | {selected.phone}<br />
                                     Address: {selected.address}
@@ -1500,7 +1559,6 @@ export default function Dashboard(){
                         );
                     })()}
 
-                    {/* Profile */}
                     {accountTab == "profile" && (
                         <form onSubmit={saveProfile}>
 
@@ -1545,7 +1603,7 @@ export default function Dashboard(){
                 </div>
             </section>
 
-            {/* Merchant login popup (any ID and password is accepted) */}
+            {/* Merchant login popup */}
             <section className="overlay" style={{ display: loginOpen ? "block" : "none" }}>
                 <div className="panel">
 
@@ -1580,7 +1638,6 @@ export default function Dashboard(){
                         <button className={tab == "orders" ? "active" : ""} onClick={function(){ switchTab("orders"); }}>Orders</button>
                     </div>
 
-                    {/* Inventory tab */}
                     {tab == "inventory" && (
                         <div>
 
@@ -1616,7 +1673,6 @@ export default function Dashboard(){
                                 </table>
                             </div>
 
-                            {/* Add / update product details */}
                             <form ref={formRef} onSubmit={saveProduct}>
                                 <h3>{form.id === "" ? "Add New Product" : "Update Product Details"}</h3>
 
@@ -1667,7 +1723,6 @@ export default function Dashboard(){
                         </div>
                     )}
 
-                    {/* Orders tab */}
                     {tab == "orders" && (
                         <div>
                             {orders.length == 0 && <p style={{ textAlign:"center" }}>No orders yet.</p>}
@@ -1680,6 +1735,9 @@ export default function Dashboard(){
                                         Address: {o.address}<br />
                                         Items: {o.items.map(function(it){ return it.name + " x " + it.qty; }).join(", ")}<br />
                                         Total: ₹{o.total} | Payment: {o.payment}<br />
+                                        {o.guarantee && (
+                                            <><span className="guarantee-tag">🛡️ Delivery Guarantee - deliver on time</span><br /></>
+                                        )}
 
                                         {o.status == "Cancelled" ? (
                                             <>Status: <span className="cancel-text">Cancelled</span></>

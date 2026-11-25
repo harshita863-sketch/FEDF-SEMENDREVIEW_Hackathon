@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>E-Commerce Login</title>
+
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #eee;
+        }
+
+        .card{
+            background: white;
+            padding: 15px;
+            margin: 10px;
+            display: inline-block;
+            border-radius: 10px;
+            box-shadow: 0 0 5px gray;
+        }
+
+        button{
+            background: green;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input{
+            padding: 8px;
+            width: 220px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Signup</h2>
+
+    <form onsubmit="signup(event)">
+        <input type="text" id="name" placeholder="Name" required><br><br>
+
+        <input type="email" id="email" placeholder="Email" required><br><br>
+
+        <input type="password" id="pass" placeholder="Password" required><br><br>
+
+        <button type="submit">Signup</button>
+    </form>
+
+    <br>
+
+    <h2>Login</h2>
+
+    <form onsubmit="login(event)">
+        <input type="email" id="le" placeholder="Email" required><br><br>
+
+        <input type="password" id="lp" placeholder="Password" required><br><br>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <br>
+
+    <p id="msg"></p>
+
+    <div id="products"></div>
+
+    <script>
+
+        function signup(event){
+            event.preventDefault();
+
+            let n = document.getElementById("name").value;
+            let e = document.getElementById("email").value;
+            let p = document.getElementById("pass").value;
+
+            localStorage.setItem(
+                e,
+                JSON.stringify({
+                    name: n,
+                    password: p
+                })
+            );
+
+            document.getElementById("msg").innerHTML =
+                "Signup Successful!";
+        }
+
+        function login(event){
+            event.preventDefault();
+
+            let e = document.getElementById("le").value;
+            let p = document.getElementById("lp").value;
+
+            let u = JSON.parse(localStorage.getItem(e));
+
+            if(u && u.password === p){
+
+                document.getElementById("msg").innerHTML =
+                    "Login Successful!";
+
+                document.getElementById("products").innerHTML = `
+                    <h2>Our Products</h2>
+
+                    <div class="card">
+                        <h3>Shoes</h3>
+                        <p>Price: ₹500</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Watch</h3>
+                        <p>Price: ₹800</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Bag</h3>
+                        <p>Price: ₹600</p>
+                    </div>
+                `;
+
+            } else {
+
+                document.getElementById("msg").innerHTML =
+                    "Invalid Login!";
+
+                document.getElementById("products").innerHTML = "";
+            }
+        }
+
+    </script>
+
+</body>
+</html>

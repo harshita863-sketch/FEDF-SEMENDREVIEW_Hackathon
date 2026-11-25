@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Login</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #c31616;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            width: 350px;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px gray;
+            text-align: center;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 95%;
+            padding: 10px;
+            background: green;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: darkgreen;
+        }
+
+        hr {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Student Signup</h2>
+
+    <form onsubmit="signup(event)">
+        <input type="text" id="name" placeholder="Name" required><br>
+
+        <input type="email" id="email" placeholder="Email" required><br>
+
+        <input type="password" id="pass" placeholder="Password" required><br>
+
+        <input type="password" id="confirm" placeholder="Confirm Password" required><br>
+
+        <button type="submit">Signup</button>
+    </form>
+
+    <hr>
+
+    <h2>Student Login</h2>
+
+    <form onsubmit="login(event)">
+        <input type="email" id="loginEmail" placeholder="Email" required><br>
+
+        <input type="password" id="loginPass" placeholder="Password" required><br>
+
+        <button type="submit">Login</button>
+    </form>
+
+</div>
+
+<script>
+function signup(event) {
+    event.preventDefault();
+
+    let name = document.getElementById("name").value;
+    let email = document.getElementById("email").value;
+    let pass = document.getElementById("pass").value;
+    let confirm = document.getElementById("confirm").value;
+
+    if (pass != confirm) {
+        alert("Passwords do not match!");
+        return;
+    }
+
+    localStorage.setItem("name", name);
+    localStorage.setItem("email", email);
+    localStorage.setItem("password", pass);
+
+    alert("Signup Successful!");
+}
+
+function login(event) {
+    event.preventDefault();
+
+    let email = document.getElementById("loginEmail").value;
+    let pass = document.getElementById("loginPass").value;
+
+    let savedEmail = localStorage.getItem("email");
+    let savedPass = localStorage.getItem("password");
+    let savedName = localStorage.getItem("name");
+
+    if (email == savedEmail && pass == savedPass) {
+        alert("Login Successful! Welcome " + savedName);
+    } else {
+        alert("Invalid Email or Password!");
+    }
+}
+</script>
+
+</body>
+</html>

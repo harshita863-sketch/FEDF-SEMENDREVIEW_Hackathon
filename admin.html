@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>College Portal</title>
+</head>
+<body>
+    <h2>College Portal Login</h2>
+
+    <input id="email" placeholder="Email"><br><br>
+    <input id="pass" type="password" placeholder="Password"><br><br>
+
+    <select id="role">
+        <option value="Student">Student</option>
+        <option value="Admin">Admin</option>
+    </select><br><br>
+
+    <button onclick="login()">Login</button>
+
+    <script>
+        localStorage.setItem("admin", JSON.stringify({
+            email: "admin@gmail.com",
+            password: "admin123",
+            role: "Admin"
+        }));
+
+        localStorage.setItem("student", JSON.stringify({
+            email: "student@gmail.com",
+            password: "stu123",
+            role: "Student"
+        }));
+
+        function login() {
+            let e = document.getElementById("email").value;
+            let p = document.getElementById("pass").value;
+            let r = document.getElementById("role").value;
+
+            let user = JSON.parse(localStorage.getItem(r.toLowerCase()));
+
+            if (user.email === e && user.password === p) {
+                alert("Login successful!");
+
+                if (r === "Admin") {
+                    window.location.href = "admin.html";
+                } else {
+                    window.location.href = "student.html";
+                }
+            } else {
+                alert("Invalid email or password!");
+            }
+        }
+    </script>
+</body>
+</html>

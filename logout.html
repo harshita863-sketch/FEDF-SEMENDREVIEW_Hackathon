@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Login Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f2f2f2;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        input {
+            padding: 10px;
+            width: 220px;
+            border: 1px solid gray;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: blue;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .container {
+            background: white;
+            width: 350px;
+            margin: auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px gray;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Register</h2>
+
+        <input id="newUser" placeholder="Create Username"><br><br>
+        <input id="newPass" type="password" placeholder="Create Password"><br><br>
+        <button onclick="register()">Register</button>
+
+        <hr>
+
+        <h2>Login</h2>
+
+        <input id="username" placeholder="Enter Username"><br><br>
+        <input id="password" type="password" placeholder="Enter Password"><br><br>
+        <button onclick="login()">Login</button>
+
+        <div id="dashboard" style="display:none;">
+            <h2 id="welcome"></h2>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        function register() {
+            let user = document.getElementById("newUser").value;
+            let pass = document.getElementById("newPass").value;
+
+            if (user == "" || pass == "") {
+                alert("Enter username and password!");
+                return;
+            }
+
+            localStorage.setItem("username", user);
+            localStorage.setItem("password", pass);
+
+            alert("Registration successful!");
+        }
+
+        function login() {
+            let user = document.getElementById("username").value;
+            let pass = document.getElementById("password").value;
+
+            if (user == localStorage.getItem("username") &&
+                pass == localStorage.getItem("password")) {
+
+                sessionStorage.setItem("loggedIn", "true");
+                sessionStorage.setItem("user", user);
+                showDashboard();
+            } else {
+                alert("Please register first or enter correct details!");
+            }
+        }
+
+        function showDashboard() {
+            if (sessionStorage.getItem("loggedIn") == "true") {
+                document.getElementById("dashboard").style.display = "block";
+                document.getElementById("welcome").innerHTML =
+                    "Welcome, " + sessionStorage.getItem("user");
+            } else {
+                document.getElementById("dashboard").style.display = "none";
+            }
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            showDashboard();
+            alert("Logged out successfully!");
+        }
+
+        showDashboard();
+    </script>
+
+</body>
+</html>
